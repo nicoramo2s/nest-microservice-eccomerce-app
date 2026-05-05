@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -39,33 +40,43 @@ export class ProductsService {
   async findOne(id: number) {
     return await this.prisma.product
       .findUniqueOrThrow({
-        where: { id },
+        where: { id , available: true },
       })
       .catch(() => {
-        throw new NotFoundException(`Product with id ${id} not found`);
+        throw new RpcException({
+          message: `Product with id ${id} not found`,
+          status: HttpStatus.NOT_FOUND,
+        });
       });
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
-    const { id:__ , ...data } = updateProductDto;
+    const { id: __, ...data } = updateProductDto;
     return await this.prisma.product
       .update({
         where: { id },
         data: data,
       })
       .catch(() => {
-        throw new NotFoundException(`Product with id ${id} not found`);
+        throw new RpcException({
+          message: `Product with id ${id} not found`,
+          status: HttpStatus.NOT_FOUND,
+        });
       });
   }
 
   async remove(id: number) {
-    return await this.prisma.product
+    const product = await this.prisma.product
       .update({
         where: { id, available: true },
         data: { available: false },
       })
       .catch(() => {
-        throw new NotFoundException(`Product with id ${id} not found`);
+        throw new RpcException({
+          message: `Product with id ${id} not found`,
+          status: HttpStatus.NOT_FOUND,
+        });
       });
+    return product;
   }
 }
